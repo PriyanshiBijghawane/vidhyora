@@ -1,16 +1,20 @@
-# Full Stack Agentic App Builder with Next JS, Supabase, Gemini AI, Cline SDK, Shadcn UI Tutorial 🔥🔥
+# Vidhyora — AI-Powered Workspace
 
-## https://www.youtube.com/watch?v=UUK93oW0SaA
+Vidhyora is an AI-powered development workspace that helps users generate, edit, preview, and improve React applications using AI.
 
-<img width="1280" height="720" alt="1" src="https://github.com/user-attachments/assets/0170ace8-9451-40b0-8d8e-d5534a05bba1" />
+Build applications from natural-language prompts, explore generated code, and preview changes in an interactive workspace.
 
----
-
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Features](#features)
+- [Authentication](#auth-clerk)
+- [Workspace](#workspace)
+- [AI Code Generation](#ai-code-generation-api-gen-ai-code)
+- [Improve with AI](#improve-with-ai--cline-sdk-api-improve--pro--starter)
+- [Fix with AI](#fix-with-ai)
+- [Code Panel](#code-panel-sandpack)
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
 - [Database Setup](#database-setup)
@@ -19,86 +23,112 @@
 
 ## Overview
 
-A full-stack AI-powered React app generator where users describe what they want to build, and the AI writes production-ready React code that renders live in the browser — just like Bolt.new or Lovable.
+Vidhyora is an AI-powered development workspace designed to simplify React application development.
 
-Users get a live Sandpack preview, a persistent chat history, image upload support, and a credit-based subscription system. Pro users can trigger a Cline AI agent that autonomously improves the generated app file by file.
+Users can describe their application requirements in natural language and use AI to generate code. The workspace brings together chat, code editing, and live preview to make application development easier.
+
+The project is designed around an interactive development workflow, with features such as AI-assisted code generation, workspace management, code preview, and AI-powered code improvement.
+
+Vidhyora aims to provide a convenient environment where developers can experiment with ideas, inspect generated code, and iteratively improve their applications.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router, TypeScript) |
-| Auth + Billing | Clerk |
-| Database | Supabase (via Prisma) |
-| Image Storage | Supabase Storage |
-| Rate Limiting | Arcjet |
-| AI Model | Gemini 3.5 Flash |
-| AI Agent (Improve) | Cline SDK (`@cline/sdk`) |
-| Code Editor + Preview | Sandpack (`@codesandbox/sandpack-react`) |
-| Styling | Tailwind CSS v4 + Shadcn UI |
-| ORM | Prisma (Postgres adapter) |
+## Tech Stack
 
+| Layer | Technology |
+
+| Frontend Framework | Next.js |
+| UI Library | React |
+| Language | JavaScript |
+| Styling | Tailwind CSS |
+| Authentication | Clerk |
+| Database ORM | Prisma |
+| Backend API | FastAPI |
+| AI Integration | Gemini |
+| Code Editor | Monaco Editor |
+| Live Code Preview | Sandpack |
+| Icons | Lucide React |
+| Notifications | Sonner |
 ---
 
 ## Features
 
 ### Landing Page
-- Prompt textarea with rotating placeholders and suggestion chips
-- Live browser mockup preview
-- Features section, how-it-works steps, pricing table (Clerk `<PricingTable />`)
-- Dark theme throughout
 
-### Auth (Clerk)
-- Google OAuth sign-in
-- User auto-created in Supabase on first login with free credits
-- Plan detection via Clerk `has()` — credits top-up on plan upgrade
-- Pricing modal accessible from the header credit badge
+- Prompt input for describing the application to generate
+- Suggestion chips to help users get started
+- Overview of available features and workflow
+- Pricing information through Clerk's `<PricingTable />` component, if configured
+
+- 
+### Authentication (Clerk)
+
+- User authentication using Clerk
+- Google OAuth sign-in, if configured
+- User account integration with the application's database
+- Subscription and plan management, if implemented
+- Access to account-related features through authenticated sessions
 
 ### Workspace
-- Split-panel layout: Chat (left) + Code/Preview (right)
-- Full persistent chat history stored in Supabase
-- AI responses rendered with `react-markdown` and a live blinking cursor during streaming
-- Image upload via paperclip → Supabase Storage → CDN URL injected into prompt
-- Auto-scroll, hidden scrollbar, user avatars
 
-### AI Code Generation (`/api/gen-ai-code`)
-- Gemini 3.5 Flash with `thinkingConfig` enabled
-- Streams Gemini thought labels as live status steps in the chat panel
-- Returns strict JSON: `{ assistantMessage, title, files, dependencies }`
-- npm registry validation — hallucinated packages silently filtered
-- Atomic DB transaction: workspace upsert + credit deduction in one operation
+- Split-panel workspace for chat and code preview
+- AI-assisted application development through chat
+- Code and preview tabs for inspecting generated applications
+- Workspace history, if persistence is implemented
+- Image upload support, if configured
+- User avatars and automatic scrolling, if implemented
 
-### Improve with AI — Cline SDK (`/api/improve`) — Pro + Starter
-- Cline `Agent` with two tools: `update_file` + `done_improving`
-- Agent streams reasoning live into the chat panel as it works
-- Files patched one at a time via SSE — Sandpack updates without remounting
-- `lifecycle: { completesRun: true }` ends the agent cleanly after all files are done
-- Gated to Starter and Pro plans
+### AI Code Generation
+
+- Generate application code from natural-language prompts
+- AI-assisted React application development
+- Display generated code in the workspace
+- Preview generated applications using Sandpack
+- Handle AI responses and generated files through the backend API
+
+### Improve with AI
+
+- Use AI to improve existing application code
+- Update files based on user instructions
+- Review generated changes in the code workspace
+- Preview updated code to evaluate the result
+
+These capabilities depend on the AI improvement workflow being configured and implemented in the project.
 
 ### Fix with AI
-- Sandpack listens for runtime + compile errors
-- Error banner appears in Preview tab with "Fix with AI" button
-- Injects the error + context into Gemini and triggers a new generation
 
-### Code Panel (Sandpack)
-- Preview and Code tabs — auto-switches to Preview after each generation
-- Built-in CodeMirror editor (read-only), file explorer
-- Tailwind v3 loaded via CDN inside the preview iframe
-- Smart re-keying: `SandpackProvider` only remounts when file paths change, not contents
-- Export to ZIP — downloads a ready-to-run CRA project with `package.json`
+- Identify runtime or compilation errors in the application preview
+- Provide error context to the AI for troubleshooting
+- Generate suggested fixes based on the reported error
+- Preview the updated code after applying a fix
 
-### Projects Page
-- Grid of all past workspaces with title, first prompt preview, message count, timestamp
-- Delete project with confirmation modal
-- Empty state with CTA
+Error detection and AI-assisted fixes depend on the corresponding functionality being implemented in the project.
+
+### Code Panel
+
+- Switch between Code and Preview tabs
+- Inspect generated application files
+- Preview React applications in an interactive browser environment
+- View code changes as the application is updated
+- Use Sandpack for the live preview, if configured
+
+  ### Projects Page
+
+- Display saved workspaces in a grid
+- Show workspace titles and prompt previews
+- Display message counts and timestamps
+- Delete workspaces with a confirmation dialog
+- Show an empty state with a call to action for new users
 
 ### Token / Credit System
-- Free: 10 credits · Starter: 50 · Pro: 150
-- Cost: 1 credit per generation or improve
-- Checked client-side and server-side (402 response as backup)
-- Credits top up additively on plan upgrade, preserved on downgrade
+
+- Credit-based usage system for AI operations
+- Free, Starter, and Pro subscription plans
+- Credit deduction for code generation and AI improvements
+- Credit balance validation before processing requests
+- Credit updates based on subscription plan changes
 
 ---
 
@@ -106,83 +136,109 @@ Users get a live Sandpack preview, a persistent chat history, image upload suppo
 
 ### Prerequisites
 
-- Node.js 22+
-- A Supabase project
-- A Clerk application
-- A Google AI Studio API key (Gemini)
+Before running Vidhyora, make sure you have installed:
+
+- Node.js and npm
+- Python (if running the FastAPI backend)
+- Git
 
 ### Installation
 
-```bash
-git clone https://github.com/roadsidecoder/buildai.git
-cd buildai
-npm install
-```
+1. Clone the repository:
 
-Generate the Prisma client:
+   ```bash
+   git clone https://github.com/PriyanshiBijghawane/vidhyora.git
+   ```
 
-```bash
-npx prisma generate
-npx prisma db push
-```
+2. Open the project directory:
 
-Run the development server:
+   ```bash
+   cd vidhyora
+   ```
 
-```bash
-npm run dev
-```
+3. Install frontend dependencies:
 
-Open [http://localhost:3000](http://localhost:3000).
+   ```bash
+   npm install
+   ```
+
+4. Configure the required environment variables.
+
+5. Start the frontend development server:
+
+   ```bash
+   npm run dev
+   ```
+
+Open `http://localhost:3000` in your browser.
+
+### Backend
+
+If your project uses the FastAPI backend, follow these steps from the backend directory:
+
+1. Create and activate a Python virtual environment.
+2. Install the dependencies listed in your backend requirements file.
+3. Configure the backend environment variables.
+4. Start the FastAPI server using your project's configured command.
 
 ---
 
 ## Environment Variables
 
-Create a `.env.local` file in the root:
+Vidhyora uses environment variables to configure authentication, database access, and AI services.
+
+### Frontend Environment
+
+Create a `.env` file in the project root and add the variables required by your application.
 
 ```env
-# Clerk
+# Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-
-# Database (Supabase Postgres connection string)
+# Database
 DATABASE_URL=
 
-# Google Gemini
+# Gemini AI
 GEMINI_API_KEY=
 
-# Arcjet
+# Arcjet (if configured)
 ARCJET_KEY=
 ```
+---
+
+### Setup Notes
+
+- Get credentials from the relevant service dashboards.
+- Add only the environment variables required by your actual project configuration.
+- Never commit real API keys, passwords, or database credentials to GitHub.
+- Keep local `.env` files out of version control.
+- Restart the development server after changing environment variables.
+
+Check the project's configuration files to confirm the exact variable names required.
 
 ---
 
 ## Database Setup
 
-The Prisma schema has two models:
+Vidhyora uses a database to store user information and workspace data, depending on the configured backend.
 
-**User** — synced from Clerk on first login
-```
-id, clerkId, name, email, imageUrl, credits, plan, createdAt, updatedAt
-```
+### Database Configuration
 
-**Workspace** — one per AI session
-```
-id, userId (FK), title, messages (JSON), fileData (JSON), createdAt, updatedAt
-```
+- Configure the database connection using the appropriate environment variables.
+- Apply the Prisma schema and migrations if Prisma is configured.
+- Ensure the database is accessible before starting the application.
 
-`fileData` stores both generated files and validated dependencies as a single JSON blob.
+### Data Models
 
-Supabase Storage bucket: `workspace-images` — public, organized by `userId/workspaceId/`.
+Document the models defined in your current Prisma schema here, including their fields and relationships.
 
----
+### Image Storage
 
-## 🌟 Show your support
+If image uploads are enabled, configure the required storage provider and bucket permissions according to the application settings.
 
-Give a ⭐ if this project helped you learn something new!
+## 🌟 Show Your Support
+
+If you find Vidhyora useful, consider giving this repository a ⭐ on GitHub!
+    
+
