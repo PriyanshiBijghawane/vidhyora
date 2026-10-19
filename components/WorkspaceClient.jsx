@@ -137,29 +137,31 @@ export function WorkspaceClient({
 
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
+            let event;
             try {
-              const event = JSON.parse(line.slice(6));
-              if (event.type === "status") {
-                pushStep(event.message);
-              } else if (event.type === "done") {
-                completeSteps();
-                setWorkspaceId(event.workspaceId);
-                setFileData(event.fileData);
-                setCredits(event.creditsRemaining);
-                setMessages((prev) => [
-                  ...prev,
-                  { role: "assistant", content: event.assistantMessage },
-                ]);
-                window.history.replaceState(
-                  null,
-                  "",
-                  `/workspace?id=${event.workspaceId}`
-                );
-              } else if (event.type === "error") {
-                throw new Error(event.message);
-              }
+              event = JSON.parse(line.slice(6));
             } catch {
               // skip malformed SSE lines
+              continue;
+            }
+            if (event.type === "status") {
+              pushStep(event.message);
+            } else if (event.type === "done") {
+              completeSteps();
+              setWorkspaceId(event.workspaceId);
+              setFileData(event.fileData);
+              setCredits(event.creditsRemaining);
+              setMessages((prev) => [
+                ...prev,
+                { role: "assistant", content: event.assistantMessage },
+              ]);
+              window.history.replaceState(
+                null,
+                "",
+                `/workspace?id=${event.workspaceId}`
+              );
+            } else if (event.type === "error") {
+              throw new Error(event.message);
             }
           }
         }
@@ -254,41 +256,42 @@ export function WorkspaceClient({
 
           for (const line of lines) {
             if (!line.startsWith("data: ")) continue;
+            let event;
             try {
-              const event = JSON.parse(line.slice(6));
-
-              if (event.type === "thinking") {
-                // Stream agent reasoning into the placeholder assistant message
-                accumulatedThinking += event.text;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: accumulatedThinking,
-                  };
-                  return updated;
-                });
-              } else if (event.type === "file_patch") {
-                // Accumulate locally — don't touch state yet
-                localPatches[event.path] = { code: event.code };
-              } else if (event.type === "done") {
-                // Apply all patches at once now that the stream is complete
-                setFileData(event.fileData);
-                setCredits(event.creditsRemaining);
-                // Replace thinking text with clean summary
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: event.summary,
-                  };
-                  return updated;
-                });
-              } else if (event.type === "error") {
-                throw new Error(event.message);
-              }
+              event = JSON.parse(line.slice(6));
             } catch {
               // skip malformed SSE lines
+              continue;
+            }
+            if (event.type === "thinking") {
+              // Stream agent reasoning into the placeholder assistant message
+              accumulatedThinking += event.text;
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  role: "assistant",
+                  content: accumulatedThinking,
+                };
+                return updated;
+              });
+            } else if (event.type === "file_patch") {
+              // Accumulate locally — don't touch state yet
+              localPatches[event.path] = { code: event.code };
+            } else if (event.type === "done") {
+              // Apply all patches at once now that the stream is complete
+              setFileData(event.fileData);
+              setCredits(event.creditsRemaining);
+              // Replace thinking text with clean summary
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  role: "assistant",
+                  content: event.summary,
+                };
+                return updated;
+              });
+            } else if (event.type === "error") {
+              throw new Error(event.message);
             }
           }
         }

@@ -1,3 +1,4 @@
+import re
 import json
 import logging
 from fastapi import APIRouter, HTTPException, status
@@ -13,6 +14,39 @@ from backend.services.gemini_service import (
 
 logger = logging.getLogger("backend.routes.gen_ai_code")
 router = APIRouter(prefix="/api", tags=["Code Generation"])
+
+def extract_json_object(text: str):
+    if not text:
+        return None
+    raw = text.strip()
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict) and "files" in data:
+            return data
+    except Exception:
+        pass
+
+    if "```" in raw:
+        cleaned = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+        try:
+            data = json.loads(cleaned.strip())
+            if isinstance(data, dict) and "files" in data:
+                return data
+        except Exception:
+            pass
+
+    last_brace = raw.rfind("}")
+    if last_brace != -1:
+        # Search backwards from the last '}' for a matching '{' that decodes valid dict with files
+        for first_brace in [i for i, c in enumerate(raw[:last_brace]) if c == "{"]:
+            try:
+                candidate = json.loads(raw[first_brace:last_brace + 1])
+                if isinstance(candidate, dict) and "files" in candidate:
+                    return candidate
+            except Exception:
+                continue
+    return None
 
 @router.post("/gen-ai-code")
 async def generate_ai_code(req: GenAICodeRequest):
@@ -44,14 +78,16 @@ async def generate_ai_code(req: GenAICodeRequest):
                     yield sse_event("status", {"message": event["label"]})
                 elif ev_type == "content":
                     accumulated_json += event["chunk"]
+                elif ev_type == "reset":
+                    accumulated_json = ""
                 elif ev_type == "error":
                     yield sse_event("error", {"message": event["message"]})
                     return
 
-            # Parse JSON
-            try:
-                parsed = json.loads(accumulated_json)
-            except Exception:
+            # Parse JSON safely
+            parsed = extract_json_object(accumulated_json)
+            if not parsed:
+                logger.error(f"Failed to parse AI JSON. First 200 chars: {accumulated_json[:200]}")
                 yield sse_event("error", {"message": "AI returned invalid JSON. Please try again."})
                 return
 

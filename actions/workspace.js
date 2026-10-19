@@ -42,6 +42,14 @@ export async function getWorkspaceUser() {
     }
   }
 
+  if (!user && clerkId) {
+    user = {
+      id: clerkId,
+      credits: 10,
+      plan: "free",
+    };
+  }
+
   if (!user) redirect("/");
 
   return user;
@@ -50,17 +58,20 @@ export async function getWorkspaceUser() {
 // ─── Get a workspace by id (must belong to the current user) ─────────────────
 
 export async function getWorkspaceById(workspaceId, userId) {
-  const workspace = await db.workspace.findUnique({
-    where: { id: workspaceId, userId },
-    select: {
-      id: true,
-      title: true,
-      messages: true,
-      fileData: true,
-    },
-  });
-
-  if (!workspace) redirect("/");
+  let workspace = null;
+  try {
+    workspace = await db.workspace.findUnique({
+      where: { id: workspaceId, userId },
+      select: {
+        id: true,
+        title: true,
+        messages: true,
+        fileData: true,
+      },
+    });
+  } catch (err) {
+    console.error("Failed to query workspace:", err);
+  }
 
   return workspace;
 }

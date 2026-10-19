@@ -128,15 +128,18 @@ async def generate_code_stream(
     model_name = "gemini-2.5-flash"
 
     api_key = (os.getenv("GEMINI_API_KEY") or GEMINI_API_KEY or "").strip()
+    yielded_any_content = False
 
-    # Use google-genai SDK if available, or direct REST streaming
+    # Try SDK streaming with active quota model first
+    models_to_try = ["gemini-flash-latest", "gemini-2.5-flash"]
+    sdk_succeeded = False
+
     try:
         from google import genai
         from google.genai import types
 
         client = genai.Client(api_key=api_key or None)
-        
-        # Build contents structure for SDK
+
         sdk_contents = []
         for c in contents:
             parts = [types.Part.from_text(text=p["text"]) for p in c["parts"]]
@@ -149,42 +152,59 @@ async def generate_code_stream(
             thinking_config=types.ThinkingConfig(thinking_budget=0)
         )
 
-        stream = await client.aio.models.generate_content_stream(
-            model=model_name,
-            contents=sdk_contents,
-            config=config
-        )
+        for current_model in models_to_try:
+            try:
+                stream = await client.aio.models.generate_content_stream(
+                    model=current_model,
+                    contents=sdk_contents,
+                    config=config
+                )
 
-        last_emit_time = 0.0
+                last_emit_time = 0.0
 
-        async for chunk in stream:
-            candidates = getattr(chunk, "candidates", None) or []
-            if not candidates:
-                continue
+                async for chunk in stream:
+                    candidates = getattr(chunk, "candidates", None) or []
+                    if not candidates:
+                        continue
 
-            content = getattr(candidates[0], "content", None)
-            parts = getattr(content, "parts", None) or []
+                    content = getattr(candidates[0], "content", None)
+                    parts = getattr(content, "parts", None) or []
 
-            for part in parts:
-                text = getattr(part, "text", None)
-                if not text:
-                    continue
+                    for part in parts:
+                        text = getattr(part, "text", None)
+                        if not text:
+                            continue
 
-                is_thought = getattr(part, "thought", False)
-                if is_thought:
-                    now = time.time()
-                    if now - last_emit_time > 0.6:
-                        label = extract_thought_label(text)
-                        if label:
-                            yield {"type": "thought", "label": label}
-                            last_emit_time = now
-                else:
-                    yield {"type": "content", "chunk": text}
+                        is_thought = getattr(part, "thought", False)
+                        if is_thought:
+                            now = time.time()
+                            if now - last_emit_time > 0.6:
+                                label = extract_thought_label(text)
+                                if label:
+                                    yield {"type": "thought", "label": label}
+                                    last_emit_time = now
+                        else:
+                            yield {"type": "content", "chunk": text}
+                            yielded_any_content = True
 
-    except Exception as sdk_err:
-        logger.warning(f"SDK streaming encountered {sdk_err}, falling back to direct REST SSE: {sdk_err}")
-        # Fallback to direct HTTP SSE streaming with Gemini REST API
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:streamGenerateContent?alt=sse&key={api_key}"
+                sdk_succeeded = True
+                break
+            except Exception as stream_err:
+                logger.warning(f"SDK model {current_model} failed: {stream_err}")
+                if yielded_any_content:
+                    yield {"type": "reset"}
+                    yielded_any_content = False
+                await asyncio.sleep(0.5)
+
+    except Exception as sdk_setup_err:
+        logger.warning(f"SDK setup error: {sdk_setup_err}")
+
+    if sdk_succeeded:
+        return
+
+    # Fallback to direct HTTP SSE streaming with Gemini REST API
+    for rest_model in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{rest_model}:streamGenerateContent?alt=sse&key={api_key}"
         payload = {
             "contents": contents,
             "systemInstruction": {
@@ -198,11 +218,15 @@ async def generate_code_stream(
         }
 
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            if yielded_any_content:
+                yield {"type": "reset"}
+                yielded_any_content = False
+
+            async with httpx.AsyncClient(timeout=75.0) as client:
                 async with client.stream("POST", url, json=payload) as response:
                     if response.status_code != 200:
-                        yield {"type": "error", "message": f"Gemini API error: {response.status_code}"}
-                        return
+                        logger.warning(f"REST model {rest_model} returned {response.status_code}")
+                        continue
 
                     last_emit_time = 0.0
 
@@ -231,8 +255,14 @@ async def generate_code_stream(
                                             last_emit_time = now
                                 else:
                                     yield {"type": "content", "chunk": txt}
+                                    yielded_any_content = True
                         except Exception as e:
                             logger.error(f"Error parsing SSE chunk: {e}")
+                    return
         except Exception as rest_err:
-            logger.error(f"REST streaming failed: {rest_err}")
-            yield {"type": "error", "message": "Failed to connect to AI generation service."}
+            logger.error(f"REST model {rest_model} failed: {rest_err}")
+            if yielded_any_content:
+                yield {"type": "reset"}
+                yielded_any_content = False
+
+    yield {"type": "error", "message": "Failed to connect to AI generation service."}

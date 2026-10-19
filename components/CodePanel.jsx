@@ -26,6 +26,7 @@ import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PricingModal } from "@/components/PricingModal";
+import { cn } from "@/lib/utils";
 
 // ─── Placeholder ──────────────────────────────────────────────────────────────
 
@@ -55,17 +56,35 @@ const PLACEHOLDER_FILES = {
 
 const BASE_DEPENDENCIES = {
   "lucide-react": "^0.344.0",
-  recharts: "^2.12.0",
-  "framer-motion": "^11.0.0",
-  "date-fns": "^3.3.0",
-  "react-hook-form": "^7.50.0",
-  zod: "^3.22.4",
   clsx: "^2.1.0",
   "tailwind-merge": "^2.2.1",
-  "@heroicons/react": "^2.0.18",
-  debug: "^4.3.4",
-  "follow-redirects": "^1.15.6",
 };
+
+function normalizeFiles(files) {
+  if (!files || Object.keys(files).length === 0) return PLACEHOLDER_FILES;
+  const normalized = {};
+  for (const [rawPath, fObj] of Object.entries(files)) {
+    const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+    const code =
+      typeof fObj === "object" && fObj !== null && "code" in fObj
+        ? fObj.code
+        : typeof fObj === "string"
+        ? fObj
+        : String(fObj ?? "");
+    normalized[path] = { code };
+  }
+  if (!normalized["/App.js"]) {
+    const alt =
+      normalized["/App.jsx"] ||
+      normalized["/App.tsx"] ||
+      normalized["/src/App.js"] ||
+      normalized["/src/App.jsx"];
+    if (alt) {
+      normalized["/App.js"] = alt;
+    }
+  }
+  return normalized;
+}
 
 // ─── SandpackInner ────────────────────────────────────────────────────────────
 
@@ -88,26 +107,25 @@ function SandpackInner({
   const [showImproveInput, setShowImproveInput] = useState(false);
   const unsubscribeRef = useRef(null);
 
-  // Push file content updates into Sandpack without remounting.
-  // This runs whenever fileData changes (e.g. after improve completes).
+  // Push file content updates into Sandpack without flood compiling on mount
   const prevFilesRef = useRef(fileData?.files ?? {});
   useEffect(() => {
     if (!fileData?.files) return;
     const prev = prevFilesRef.current;
-    for (const [path, fObj] of Object.entries(fileData.files)) {
-      const code =
-        typeof fObj === "object" && fObj !== null && "code" in fObj
-          ? fObj.code
-          : typeof fObj === "string"
-          ? fObj
-          : "";
-      if (prev[path] && prev[path]?.code !== code) {
-        sandpack.updateFile(path, code, true);
+    const norm = normalizeFiles(fileData.files);
+    for (const [path, fObj] of Object.entries(norm)) {
+      const prevCode =
+        typeof prev[path] === "object" && prev[path] !== null
+          ? prev[path].code
+          : typeof prev[path] === "string"
+          ? prev[path]
+          : undefined;
+      if (prevCode !== undefined && prevCode !== fObj.code) {
+        sandpack.updateFile(path, fObj.code, true);
       }
     }
     prevFilesRef.current = fileData.files;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileData?.files]);
+  }, [fileData?.files, sandpack]);
 
   // Listen for Sandpack runtime errors
   useEffect(() => {
@@ -377,9 +395,10 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
         )}
 
         <style>{`
-          .sp-wrapper,
-          .sp-layout,
-          .sp-stack,
+          .sp-wrapper {
+            height: 100% !important;
+            width: 100% !important;
+          }
           .sp-preview,
           .sp-preview-container,
           .sp-preview-iframe,
@@ -387,53 +406,49 @@ root.render(<React.StrictMode><App /></React.StrictMode>);`
             height: 100% !important;
             min-height: 100% !important;
             max-height: 100% !important;
+            width: 100% !important;
             flex: 1 !important;
           }
         `}</style>
 
-        <SandpackLayout
-          style={{
-            height: "100%",
-            width: "100%",
-            border: "none",
-            borderRadius: 0,
-            background: "transparent",
-          }}
-          className="!h-full !w-full border-none !bg-transparent"
+        {/* Preview Panel */}
+        <div
+          className={cn(
+            "h-full w-full flex flex-col",
+            activeTab === "preview" ? "flex" : "hidden"
+          )}
         >
-          <TabsContent
-            value="preview"
-            keepMounted
-            className="mt-0 h-full w-full !h-full flex-1"
-          >
-            <SandpackPreview
-              style={{ height: "100%" }}
-              showOpenInCodeSandbox={false}
-            />
-          </TabsContent>
+          <SandpackPreview
+            style={{ height: "100%", width: "100%", flex: 1 }}
+            showOpenInCodeSandbox={false}
+            showRefreshButton={true}
+            showRestartButton={true}
+          />
+        </div>
 
-          <TabsContent
-            value="code"
-            keepMounted
-            className="mt-0 flex h-full w-full !h-full flex-1"
-          >
-            <SandpackFileExplorer
-              style={{
-                height: "100%",
-                width: "180px",
-                borderRight: "0.5px solid rgba(255,255,255,0.08)",
-              }}
-            />
-            <SandpackCodeEditor
-              style={{ height: "100%", flex: 1 }}
-              showTabs
-              showLineNumbers
-              showInlineErrors
-              closableTabs
-              readOnly
-            />
-          </TabsContent>
-        </SandpackLayout>
+        {/* Code Panel */}
+        <div
+          className={cn(
+            "h-full w-full",
+            activeTab === "code" ? "flex" : "hidden"
+          )}
+        >
+          <SandpackFileExplorer
+            style={{
+              height: "100%",
+              width: "180px",
+              borderRight: "0.5px solid rgba(255,255,255,0.08)",
+            }}
+          />
+          <SandpackCodeEditor
+            style={{ height: "100%", flex: 1 }}
+            showTabs
+            showLineNumbers
+            showInlineErrors
+            closableTabs
+            readOnly
+          />
+        </div>
       </div>
 
       {/* Preview error banner — uses onFixError (Gemini), not onImprove (Cline) */}
@@ -485,7 +500,7 @@ export function CodePanel({
     if (fileData) setActiveTab("preview");
   }, [fileData]);
 
-  const files = fileData?.files ?? PLACEHOLDER_FILES;
+  const files = normalizeFiles(fileData?.files);
   const dependencies = {
     ...BASE_DEPENDENCIES,
     ...(fileData?.dependencies ?? {}),

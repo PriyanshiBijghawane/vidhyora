@@ -128,7 +128,14 @@ export default function LandingPage() {
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               ) : (
-                <SignInButton mode="modal">
+                <SignInButton
+                  mode="modal"
+                  forceRedirectUrl={
+                    prompt.trim()
+                      ? `/workspace?prompt=${encodeURIComponent(prompt.trim())}`
+                      : "/workspace"
+                  }
+                >
                   <Button className="h-8 rounded-full bg-white px-5 font-semibold">
                     Generate
                     <ArrowRight className="h-3.5 w-3.5" />
