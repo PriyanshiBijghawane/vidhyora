@@ -28,6 +28,82 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PricingModal } from "@/components/PricingModal";
 import { cn } from "@/lib/utils";
 
+// ─── Tailwind / Entrypoint templates ──────────────────────────────────────────
+
+const TAILWIND_HTML = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview</title>
+    <script id="tailwind-cdn" src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>`;
+
+const TAILWIND_INDEX_JS = `import React, { StrictMode, useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import "./styles.css";
+import App from "./App";
+
+function TailwindApp() {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.tailwind) {
+      return;
+    }
+    if (typeof document !== "undefined" && !document.getElementById("tailwind-cdn")) {
+      const script = document.createElement("script");
+      script.id = "tailwind-cdn";
+      script.src = "https://cdn.tailwindcss.com";
+      script.onload = () => {
+        setTick((t) => t + 1);
+      };
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  return <App />;
+}
+
+const root = createRoot(document.getElementById("root"));
+root.render(
+  <StrictMode>
+    <TailwindApp />
+  </StrictMode>
+);`;
+
+const BASE_STYLES_CSS = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+*, ::before, ::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+`;
+
+const TAILWIND_PACKAGE_JSON = JSON.stringify(
+  {
+    name: "vidhyora-preview",
+    main: "/index.js",
+    dependencies: {
+      react: "^18.2.0",
+      "react-dom": "^18.2.0",
+    },
+  },
+  null,
+  2
+);
+
 // ─── Placeholder ──────────────────────────────────────────────────────────────
 
 const PLACEHOLDER_FILES = {
@@ -50,6 +126,11 @@ const PLACEHOLDER_FILES = {
   );
 }`,
   },
+  "/index.js": { code: TAILWIND_INDEX_JS },
+  "/public/index.html": { code: TAILWIND_HTML },
+  "/index.html": { code: TAILWIND_HTML },
+  "/styles.css": { code: BASE_STYLES_CSS },
+  "/package.json": { code: TAILWIND_PACKAGE_JSON },
 };
 
 // ─── Base dependencies ────────────────────────────────────────────────────────
@@ -83,6 +164,24 @@ function normalizeFiles(files) {
       normalized["/App.js"] = alt;
     }
   }
+
+  // Ensure entrypoint, HTML, styles, and package.json are configured for Tailwind
+  if (!normalized["/index.js"]) {
+    normalized["/index.js"] = { code: TAILWIND_INDEX_JS };
+  }
+  if (!normalized["/public/index.html"]) {
+    normalized["/public/index.html"] = { code: TAILWIND_HTML };
+  }
+  if (!normalized["/index.html"]) {
+    normalized["/index.html"] = { code: TAILWIND_HTML };
+  }
+  if (!normalized["/styles.css"]) {
+    normalized["/styles.css"] = { code: BASE_STYLES_CSS };
+  }
+  if (!normalized["/package.json"]) {
+    normalized["/package.json"] = { code: TAILWIND_PACKAGE_JSON };
+  }
+
   return normalized;
 }
 
@@ -112,16 +211,23 @@ function SandpackInner({
   useEffect(() => {
     if (!fileData?.files) return;
     const prev = prevFilesRef.current;
-    const norm = normalizeFiles(fileData.files);
-    for (const [path, fObj] of Object.entries(norm)) {
+    for (const [rawPath, fObj] of Object.entries(fileData.files)) {
+      const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+      const code =
+        typeof fObj === "object" && fObj !== null && "code" in fObj
+          ? fObj.code
+          : typeof fObj === "string"
+          ? fObj
+          : String(fObj ?? "");
+      const prevObj = prev[rawPath] || prev[path];
       const prevCode =
-        typeof prev[path] === "object" && prev[path] !== null
-          ? prev[path].code
-          : typeof prev[path] === "string"
-          ? prev[path]
+        typeof prevObj === "object" && prevObj !== null && "code" in prevObj
+          ? prevObj.code
+          : typeof prevObj === "string"
+          ? prevObj
           : undefined;
-      if (prevCode !== undefined && prevCode !== fObj.code) {
-        sandpack.updateFile(path, fObj.code, true);
+      if (prevCode !== undefined && prevCode !== code) {
+        sandpack.updateFile(path, code, true);
       }
     }
     prevFilesRef.current = fileData.files;
@@ -225,6 +331,14 @@ function SandpackInner({
 
       for (const [filePath, fileObj] of Object.entries(filesToZip)) {
         if (filePath.startsWith("/node_modules/")) continue;
+        if (
+          filePath === "/index.html" ||
+          filePath === "/public/index.html" ||
+          filePath === "/index.js" ||
+          filePath === "/styles.css" ||
+          filePath === "/package.json"
+        )
+          continue;
         const code =
           typeof fileObj === "object" && fileObj !== null && "code" in fileObj
             ? fileObj.code
@@ -521,11 +635,20 @@ export function CodePanel({
         className="flex flex-1 flex-col h-full w-full !h-full !w-full"
         style={{ height: "100%", width: "100%" }}
         options={{
+          bundlerURL:
+            process.env.NEXT_PUBLIC_SANDPACK_BUNDLER_URL ||
+            "https://sandpack-bundler.codesandbox.io",
           initMode: "immediate",
           externalResources: ["https://cdn.tailwindcss.com"],
           recompileMode: "immediate",
           recompileDelay: 300,
           bundlerTimeOut: 90000,
+          activeFile: "/App.js",
+          visibleFiles: fileData?.files
+            ? Object.keys(fileData.files).map((p) =>
+                p.startsWith("/") ? p : `/${p}`
+              )
+            : ["/App.js"],
         }}
       >
         <SandpackInner
