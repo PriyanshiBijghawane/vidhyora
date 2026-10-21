@@ -22,8 +22,13 @@ export async function POST(request) {
 
   // ── Auth + credit check ────────────────────────────────────────────────────
 
-  const user = await db.user.findUnique({
-    where: { id: userId, clerkId },
+  const user = await db.user.findFirst({
+    where: {
+      OR: [
+        { id: userId },
+        ...(clerkId ? [{ clerkId }] : []),
+      ],
+    },
     select: { id: true, credits: true, plan: true },
   });
 
@@ -188,19 +193,34 @@ RULES:
           title: fileData.title,
         };
 
+        // Load existing messages to append user improve request and assistant summary
+        const existingWs = await db.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { messages: true },
+        });
+        const prevMessages = Array.isArray(existingWs?.messages) ? existingWs.messages : [];
+        const updatedMessages = [
+          ...prevMessages,
+          { role: "user", content: userRequest },
+          { role: "assistant", content: finalSummary || result.outputText || "Improvements applied successfully." },
+        ];
+
         await db.$transaction([
           db.workspace.update({
-            where: { id: workspaceId, userId },
-            data: { fileData: newFileData },
+            where: { id: workspaceId },
+            data: {
+              fileData: newFileData,
+              messages: updatedMessages,
+            },
           }),
           db.user.update({
-            where: { id: userId },
+            where: { id: user.id },
             data: { credits: { decrement: CREDIT_COST_PER_GENERATION } },
           }),
         ]);
 
         const updatedUser = await db.user.findUnique({
-          where: { id: userId },
+          where: { id: user.id },
           select: { credits: true },
         });
 

@@ -58,10 +58,22 @@ export async function getWorkspaceUser() {
 // ─── Get a workspace by id (must belong to the current user) ─────────────────
 
 export async function getWorkspaceById(workspaceId, userId) {
+  if (!workspaceId) return null;
   let workspace = null;
   try {
-    workspace = await db.workspace.findUnique({
-      where: { id: workspaceId, userId },
+    workspace = await db.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        ...(userId
+          ? {
+              OR: [
+                { userId },
+                { user: { clerkId: userId } },
+                { user: { id: userId } },
+              ],
+            }
+          : {}),
+      },
       select: {
         id: true,
         title: true,

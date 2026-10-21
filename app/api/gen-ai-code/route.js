@@ -151,8 +151,13 @@ export async function POST(request) {
   //   );
   // }
 
-  const user = await db.user.findUnique({
-    where: { id: userId, clerkId },
+  const user = await db.user.findFirst({
+    where: {
+      OR: [
+        { id: userId },
+        ...(clerkId ? [{ clerkId }] : []),
+      ],
+    },
     select: { id: true, credits: true },
   });
 
@@ -267,28 +272,28 @@ export async function POST(request) {
         const [workspace] = await db.$transaction([
           workspaceId
             ? db.workspace.update({
-                where: { id: workspaceId, userId },
-                data: {
-                  messages: updatedMessages,
-                  fileData: newFileData,
-                },
-              })
+              where: { id: workspaceId },
+              data: {
+                messages: updatedMessages,
+                fileData: newFileData,
+              },
+            })
             : db.workspace.create({
-                data: {
-                  userId,
-                  title: aiTitle ?? lastUserMessage.content.slice(0, 80),
-                  messages: updatedMessages,
-                  fileData: newFileData,
-                },
-              }),
+              data: {
+                userId: user.id,
+                title: aiTitle ?? lastUserMessage.content.slice(0, 80),
+                messages: updatedMessages,
+                fileData: newFileData,
+              },
+            }),
           db.user.update({
-            where: { id: userId },
+            where: { id: user.id },
             data: { credits: { decrement: CREDIT_COST_PER_GENERATION } },
           }),
         ]);
 
         const updatedUser = await db.user.findUnique({
-          where: { id: userId },
+          where: { id: user.id },
           select: { credits: true },
         });
 

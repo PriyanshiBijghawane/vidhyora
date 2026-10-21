@@ -43,7 +43,12 @@ export async function getUserProjects() {
 
   try {
     const workspaces = await db.workspace.findMany({
-      where: { userId: user.id },
+      where: {
+        OR: [
+          { userId: user.id },
+          ...(clerkId ? [{ user: { clerkId } }, { userId: clerkId }] : []),
+        ],
+      },
       select: {
         id: true,
         title: true,
@@ -126,7 +131,13 @@ export async function deleteProject(workspaceId) {
 
   try {
     await db.workspace.deleteMany({
-      where: { id: workspaceId, userId: user.id },
+      where: {
+        id: workspaceId,
+        OR: [
+          { userId: user.id },
+          ...(clerkId ? [{ user: { clerkId } }, { userId: clerkId }] : []),
+        ],
+      },
     });
   } catch (err) {
     console.error("Failed to delete workspace:", err);

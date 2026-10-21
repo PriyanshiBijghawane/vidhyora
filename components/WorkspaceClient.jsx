@@ -9,16 +9,35 @@ import { MIN_CREDITS_TO_GENERATE, BACKEND_URL } from "@/lib/constants";
 import { toast } from "sonner";
 
 function parseMessages(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
+  let parsed = raw;
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.filter(
     (m) => typeof m === "object" && m !== null && "role" in m && "content" in m
   );
 }
 
 function parseFileData(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  if (!raw.files || !raw.dependencies) return null;
-  return raw;
+  let parsed = raw;
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return null;
+    }
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  if (!parsed.files || typeof parsed.files !== "object") return null;
+  if (!parsed.dependencies || typeof parsed.dependencies !== "object") {
+    parsed.dependencies = {};
+  }
+  return parsed;
 }
 
 export function WorkspaceClient({
@@ -149,12 +168,16 @@ export function WorkspaceClient({
             } else if (event.type === "done") {
               completeSteps();
               setWorkspaceId(event.workspaceId);
+              workspaceIdRef.current = event.workspaceId;
               setFileData(event.fileData);
+              fileDataRef.current = event.fileData;
               setCredits(event.creditsRemaining);
-              setMessages((prev) => [
-                ...prev,
+              const nextMessages = [
+                ...conversationHistory,
                 { role: "assistant", content: event.assistantMessage },
-              ]);
+              ];
+              setMessages(nextMessages);
+              messagesRef.current = nextMessages;
               window.history.replaceState(
                 null,
                 "",
@@ -280,6 +303,7 @@ export function WorkspaceClient({
             } else if (event.type === "done") {
               // Apply all patches at once now that the stream is complete
               setFileData(event.fileData);
+              fileDataRef.current = event.fileData;
               setCredits(event.creditsRemaining);
               // Replace thinking text with clean summary
               setMessages((prev) => {
@@ -288,6 +312,7 @@ export function WorkspaceClient({
                   role: "assistant",
                   content: event.summary,
                 };
+                messagesRef.current = updated;
                 return updated;
               });
             } else if (event.type === "error") {
