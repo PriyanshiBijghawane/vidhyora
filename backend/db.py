@@ -110,10 +110,9 @@ async def save_gen_ai_workspace(
                     return final_workspace_id, credits_remaining
         except Exception as e:
             logger.error(f"Database error in save_gen_ai_workspace: {e}", exc_info=True)
+            raise RuntimeError(f"Database save error: {e}") from e
 
-    # Standalone mock fallback
-    final_ws_id = workspace_id or f"ws_{uuid.uuid4().hex[:16]}"
-    return final_ws_id, 99
+    raise RuntimeError("Database pool not initialized. Please verify DATABASE_URL configuration.")
 
 async def save_improve_workspace(
     workspace_id: str,
@@ -149,5 +148,6 @@ async def save_improve_workspace(
                     return credits_remaining
         except Exception as e:
             logger.error(f"Database error in save_improve_workspace: {e}", exc_info=True)
+            raise RuntimeError(f"Database save error: {e}") from e
 
-    return 99
+    raise RuntimeError("Database pool not initialized. Please verify DATABASE_URL configuration.")

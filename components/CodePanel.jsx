@@ -607,12 +607,65 @@ export function CodePanel({
   appTitle,
   isImproving,
   isProUser,
+  workspaceError,
+  requestedWorkspaceId,
 }) {
   const [activeTab, setActiveTab] = useState("preview");
 
   useEffect(() => {
     if (fileData) setActiveTab("preview");
   }, [fileData]);
+
+  if (workspaceError) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center h-full p-8 text-center bg-[#0a0a0a] select-none">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 mb-4 ring-1 ring-red-500/20">
+          <AlertTriangle className="h-7 w-7 text-red-400" />
+        </div>
+        <h2 className="text-lg font-semibold text-white tracking-tight mb-2">
+          {workspaceError.code === "NOT_FOUND"
+            ? "Workspace Not Found"
+            : workspaceError.code === "UNAUTHORIZED"
+            ? "Access Denied"
+            : "Failed to Load Workspace"}
+        </h2>
+        <p className="text-sm text-white/50 max-w-md mb-3 leading-relaxed">
+          {workspaceError.message}
+        </p>
+        {requestedWorkspaceId && (
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-[11px] uppercase tracking-wider text-white/30 font-medium">Workspace ID</span>
+            <code className="text-xs font-mono text-white/60 bg-white/5 border border-white/10 px-2.5 py-1 rounded-md">
+              {requestedWorkspaceId}
+            </code>
+          </div>
+        )}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            className="border-white/10 hover:bg-white/5 text-white/80 text-xs h-9 px-4 cursor-pointer"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+          <Button
+            variant="secondary"
+            className="bg-white/10 hover:bg-white/15 text-white text-xs h-9 px-4 cursor-pointer"
+            onClick={() => (window.location.href = "/projects")}
+          >
+            Back to Projects
+          </Button>
+          <Button
+            variant="ghost"
+            className="text-white/60 hover:text-white text-xs h-9 px-4 cursor-pointer"
+            onClick={() => (window.location.href = "/workspace")}
+          >
+            New Workspace
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const files = normalizeFiles(fileData?.files);
   const dependencies = {

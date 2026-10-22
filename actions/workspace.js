@@ -58,10 +58,9 @@ export async function getWorkspaceUser() {
 // ─── Get a workspace by id (must belong to the current user) ─────────────────
 
 export async function getWorkspaceById(workspaceId, userId) {
-  if (!workspaceId) return null;
-  let workspace = null;
+  if (!workspaceId) return { workspace: null, error: null };
   try {
-    workspace = await db.workspace.findFirst({
+    const workspace = await db.workspace.findFirst({
       where: {
         id: workspaceId,
         ...(userId
@@ -79,11 +78,40 @@ export async function getWorkspaceById(workspaceId, userId) {
         title: true,
         messages: true,
         fileData: true,
+        userId: true,
       },
     });
+
+    if (!workspace) {
+      // Check whether workspace exists under another user to distinguish unauthorized from not found
+      const existing = await db.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { id: true, userId: true },
+      });
+
+      if (existing) {
+        return {
+          workspace: null,
+          error: "UNAUTHORIZED",
+          errorMessage: "You do not have permission to access this workspace.",
+        };
+      }
+
+      return {
+        workspace: null,
+        error: "NOT_FOUND",
+        errorMessage: "Workspace not found.",
+      };
+    }
+
+    return { workspace, error: null };
   } catch (err) {
     console.error("Failed to query workspace:", err);
+    return {
+      workspace: null,
+      error: "DATABASE_ERROR",
+      errorMessage:
+        "Could not load workspace due to a database connection error. Please refresh to try again.",
+    };
   }
-
-  return workspace;
 }

@@ -269,23 +269,36 @@ export async function POST(request) {
           { role: "assistant", content: assistantMessage },
         ];
 
+        let existingWs = null;
+        if (workspaceId) {
+          existingWs = await db.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { id: true, title: true },
+          });
+        }
+
+        const projectTitle =
+          aiTitle ?? existingWs?.title ?? lastUserMessage.content.slice(0, 80);
+
         const [workspace] = await db.$transaction([
-          workspaceId
+          existingWs
             ? db.workspace.update({
-              where: { id: workspaceId },
-              data: {
-                messages: updatedMessages,
-                fileData: newFileData,
-              },
-            })
+                where: { id: workspaceId },
+                data: {
+                  messages: updatedMessages,
+                  fileData: newFileData,
+                  ...(aiTitle ? { title: aiTitle } : {}),
+                },
+              })
             : db.workspace.create({
-              data: {
-                userId: user.id,
-                title: aiTitle ?? lastUserMessage.content.slice(0, 80),
-                messages: updatedMessages,
-                fileData: newFileData,
-              },
-            }),
+                data: {
+                  ...(workspaceId ? { id: workspaceId } : {}),
+                  userId: user.id,
+                  title: projectTitle,
+                  messages: updatedMessages,
+                  fileData: newFileData,
+                },
+              }),
           db.user.update({
             where: { id: user.id },
             data: { credits: { decrement: CREDIT_COST_PER_GENERATION } },

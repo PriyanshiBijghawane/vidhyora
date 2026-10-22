@@ -33,6 +33,7 @@ export function ChatPanel({
   userId,
   workspaceId,
   appTitle,
+  workspaceError,
 }) {
   const { user } = useUser();
   const scrollContainerRef = useRef(null);
@@ -66,14 +67,15 @@ export function ChatPanel({
   }, [messages, isGenerating, isImproving]);
 
   useEffect(() => {
-    if (!initialPrompt || hasAutoSubmittedRef.current || messages.length > 0)
+    if (workspaceError || !initialPrompt || hasAutoSubmittedRef.current || messages.length > 0)
       return;
     hasAutoSubmittedRef.current = true;
     onGenerate(initialPrompt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [workspaceError]);
 
   const handleSubmit = async () => {
+    if (workspaceError) return;
     const trimmed = input.trim();
     if (!trimmed || isGenerating || isImproving || noCredits) return;
     setInput("");
@@ -138,7 +140,17 @@ export function ChatPanel({
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto px-3 py-4 [&::-webkit-scrollbar]:hidden"
       >
-        {messages.length === 0 && !isGenerating && (
+        {workspaceError && (
+          <div className="mb-4 rounded-xl border border-red-500/20 bg-red-950/40 p-3.5 text-xs text-red-200">
+            <div className="flex items-center gap-2 font-medium text-red-400">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Workspace Failed to Load</span>
+            </div>
+            <p className="mt-1 text-red-300/80 leading-relaxed">{workspaceError.message}</p>
+          </div>
+        )}
+
+        {messages.length === 0 && !isGenerating && !workspaceError && (
           <div className="flex h-full items-center justify-center">
             <p className="text-center text-xs text-white/20">
               Describe what you want to build…
@@ -331,9 +343,11 @@ export function ChatPanel({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={isGenerating || isImproving || noCredits}
+            disabled={Boolean(workspaceError) || isGenerating || isImproving || noCredits}
             placeholder={
-              noCredits
+              workspaceError
+                ? "Workspace unavailable. Please retry or create a new workspace."
+                : noCredits
                 ? "Upgrade to keep building…"
                 : isImproving
                 ? "Cline is improving your app…"

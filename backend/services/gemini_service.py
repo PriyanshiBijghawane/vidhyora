@@ -130,8 +130,8 @@ async def generate_code_stream(
     api_key = (os.getenv("GEMINI_API_KEY") or GEMINI_API_KEY or "").strip()
     yielded_any_content = False
 
-    # Try SDK streaming with active quota model first
-    models_to_try = ["gemini-flash-latest", "gemini-2.5-flash"]
+    # Try SDK streaming with gemini-2.5-flash first
+    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     sdk_succeeded = False
 
     try:

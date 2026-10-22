@@ -42,18 +42,26 @@ function parseFileData(raw) {
 
 export function WorkspaceClient({
   initialPrompt,
+  requestedWorkspaceId,
   workspace,
+  workspaceError,
   userCredits,
   userId,
   userPlan,
 }) {
-  const [workspaceId, setWorkspaceId] = useState(workspace?.id ?? null);
+  const [workspaceId, setWorkspaceId] = useState(workspace?.id ?? requestedWorkspaceId ?? null);
   const [messages, setMessages] = useState(parseMessages(workspace?.messages));
   const [fileData, setFileData] = useState(parseFileData(workspace?.fileData));
   const [credits, setCredits] = useState(userCredits);
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusLog, setStatusLog] = useState([]);
   const [isImproving, setIsImproving] = useState(false);
+
+  useEffect(() => {
+    if (workspaceError) {
+      toast.error(workspaceError.message || "Failed to load workspace");
+    }
+  }, [workspaceError]);
 
   // AbortController refs — used to cancel in-flight streams
   const generateAbortRef = useRef(null);
@@ -369,6 +377,7 @@ export function WorkspaceClient({
           userId={userId}
           workspaceId={workspaceId}
           appTitle={fileData?.title ?? workspace?.title ?? null}
+          workspaceError={workspaceError}
         />
         <div className="w-px shrink-0 bg-white/6" />
         <CodePanel
@@ -385,6 +394,8 @@ export function WorkspaceClient({
           appTitle={fileData?.title ?? workspace?.title ?? null}
           isImproving={isImproving}
           isProUser={userPlan === "pro"}
+          workspaceError={workspaceError}
+          requestedWorkspaceId={requestedWorkspaceId}
         />
       </div>
     </>
