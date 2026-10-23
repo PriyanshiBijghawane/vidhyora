@@ -4,7 +4,7 @@ Vidhyora is an AI-powered development workspace that helps users generate, edit,
 
 Build applications from natural-language prompts, explore generated code, and preview changes in an interactive workspace.
 
-##  Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
@@ -33,7 +33,7 @@ Vidhyora aims to provide a convenient environment where developers can experimen
 
 ---
 
-## Tech Stack
+
 
 ## Tech Stack
 
@@ -51,6 +51,7 @@ Vidhyora aims to provide a convenient environment where developers can experimen
 | Live Code Preview | Sandpack |
 | Icons | Lucide React |
 | Notifications | Sonner |
+
 ---
 
 ## Features
@@ -62,7 +63,8 @@ Vidhyora aims to provide a convenient environment where developers can experimen
 - Overview of available features and workflow
 - Pricing information through Clerk's `<PricingTable />` component, if configured
 
-- 
+
+
 ### Authentication (Clerk)
 
 - User authentication using Clerk
@@ -70,6 +72,7 @@ Vidhyora aims to provide a convenient environment where developers can experimen
 - User account integration with the application's database
 - Subscription and plan management, if implemented
 - Access to account-related features through authenticated sessions
+
 
 ### Workspace
 
@@ -80,6 +83,7 @@ Vidhyora aims to provide a convenient environment where developers can experimen
 - Image upload support, if configured
 - User avatars and automatic scrolling, if implemented
 
+
 ### AI Code Generation
 
 - Generate application code from natural-language prompts
@@ -87,6 +91,7 @@ Vidhyora aims to provide a convenient environment where developers can experimen
 - Display generated code in the workspace
 - Preview generated applications using Sandpack
 - Handle AI responses and generated files through the backend API
+
 
 ### Improve with AI
 
@@ -97,6 +102,7 @@ Vidhyora aims to provide a convenient environment where developers can experimen
 
 These capabilities depend on the AI improvement workflow being configured and implemented in the project.
 
+
 ### Fix with AI
 
 - Identify runtime or compilation errors in the application preview
@@ -106,6 +112,7 @@ These capabilities depend on the AI improvement workflow being configured and im
 
 Error detection and AI-assisted fixes depend on the corresponding functionality being implemented in the project.
 
+
 ### Code Panel
 
 - Switch between Code and Preview tabs
@@ -114,7 +121,8 @@ Error detection and AI-assisted fixes depend on the corresponding functionality 
 - View code changes as the application is updated
 - Use Sandpack for the live preview, if configured
 
-  ### Projects Page
+
+ ### Projects Page
 
 - Display saved workspaces in a grid
 - Show workspace titles and prompt previews
@@ -205,6 +213,7 @@ GEMINI_API_KEY=
 # Arcjet (if configured)
 ARCJET_KEY=
 ```
+
 ---
 
 ### Setup Notes
@@ -240,5 +249,3 @@ If image uploads are enabled, configure the required storage provider and bucket
 ## 🌟 Show Your Support
 
 If you find Vidhyora useful, consider giving this repository a ⭐ on GitHub!
-    
-
